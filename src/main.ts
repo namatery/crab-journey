@@ -1,4 +1,4 @@
-import { Application, Assets } from "pixi.js";
+import { Application } from "pixi.js";
 import { COLORS } from "./config";
 import { Input } from "./Input";
 import { World } from "./World";
@@ -12,9 +12,6 @@ import { Crab } from "./Crab";
   await app.init({ background: COLORS.background, resizeTo: window });
   document.getElementById("pixi-container")!.appendChild(app.canvas);
 
-  // Load image assets before building anything that needs them.
-  const crabTexture = await Assets.load("/assets/crab.png");
-
   // Build the pieces of the game.
   const groundY = app.screen.height - 120;
 
@@ -24,7 +21,11 @@ import { Crab } from "./Crab";
   const stars = new Stars(app.screen.width, groundY);
   // Center anchor + 50px size → feet are 25px below the position, so place the
   // crab a half-height above groundY to rest its feet on the ground line.
-  const crab = new Crab(crabTexture, app.screen.width / 2, groundY - 25);
+  const crab = await Crab.create(
+    "/assets/crab.png",
+    app.screen.width / 2,
+    groundY - 25,
+  );
 
   // Draw order (back to front): world, moon, stars, crab.
   app.stage.addChild(world.container);
@@ -48,7 +49,9 @@ import { Crab } from "./Crab";
       stars.scroll(-1, delta);
     }
 
-    crab.update(delta, movingRight || movingLeft);
+    // +1 = forward, -1 = backward, 0 = standing (both/neither held).
+    const direction = (movingRight ? 1 : 0) + (movingLeft ? -1 : 0);
+    crab.update(delta, direction);
     stars.update(delta);
   });
 })();
