@@ -22,7 +22,9 @@ import { Crab } from "./Crab";
   const world = new World(groundY);
   const moon = new Moon(app.screen.width * 0.78, app.screen.height * 0.22);
   const stars = new Stars(app.screen.width, groundY);
-  const crab = new Crab(crabTexture, app.screen.width / 2, groundY - 50);
+  // Center anchor + 50px size → feet are 25px below the position, so place the
+  // crab a half-height above groundY to rest its feet on the ground line.
+  const crab = new Crab(crabTexture, app.screen.width / 2, groundY - 25);
 
   // Draw order (back to front): world, moon, stars, crab.
   app.stage.addChild(world.container);
@@ -37,8 +39,14 @@ import { Crab } from "./Crab";
     const movingRight = input.isDown("d");
     const movingLeft = input.isDown("a");
 
-    if (movingRight) world.scroll(1, delta);
-    if (movingLeft) world.scroll(-1, delta);
+    if (movingRight) {
+      world.scroll(1, delta);
+      stars.scroll(1, delta);
+    }
+    if (movingLeft) {
+      world.scroll(-1, delta);
+      stars.scroll(-1, delta);
+    }
 
     crab.update(delta, movingRight || movingLeft);
     stars.update(delta);

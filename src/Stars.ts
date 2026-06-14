@@ -1,5 +1,12 @@
 import { Container, Graphics } from "pixi.js";
-import { COLORS, STAR_COUNT, TWINKLE_SPEED, TWINKLE_DEPTH } from "./config";
+import {
+  COLORS,
+  STAR_COUNT,
+  TWINKLE_SPEED,
+  TWINKLE_DEPTH,
+  STAR_PARALLAX,
+  SCROLL_SPEED,
+} from "./config";
 
 // The night sky. Builds a field of stars and gently twinkles them each frame.
 export class Stars {
@@ -8,9 +15,12 @@ export class Stars {
   // gfx = the visible dot, base = its normal brightness, phase = its place in the wave.
   private stars: { gfx: Graphics; base: number; phase: number }[] = [];
   private elapsed = 0;
+  private width: number;
 
   // skyHeight = the bottom of the sky (usually the horizon / groundY).
   constructor(width: number, skyHeight: number) {
+    this.width = width;
+
     for (let i = 0; i < STAR_COUNT; i++) {
       const gfx = new Graphics().circle(0, 0, Math.random() * 2 + 1).fill(COLORS.star);
 
@@ -25,6 +35,18 @@ export class Stars {
       gfx.alpha = base;
       this.container.addChild(gfx);
       this.stars.push({ gfx, base, phase });
+    }
+  }
+
+  // Drift the stars when the crab walks. Slower than the ground (parallax),
+  // and each star wraps around horizontally so the sky never empties out.
+  // direction: +1 = crab moving right (sky slides left), -1 = left.
+  scroll(direction: number, delta: number) {
+    const dx = direction * SCROLL_SPEED * STAR_PARALLAX * delta;
+    for (const star of this.stars) {
+      star.gfx.x -= dx;
+      if (star.gfx.x < 0) star.gfx.x += this.width;
+      else if (star.gfx.x >= this.width) star.gfx.x -= this.width;
     }
   }
 

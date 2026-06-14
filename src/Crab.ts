@@ -10,7 +10,7 @@ export class Crab {
   constructor(texture: Texture, x: number, y: number) {
     this.sprite = new Sprite(texture);
     this.sprite.anchor.set(0.5); // pivot from the center, so positioning is easy
-    this.sprite.setSize(110); // scale the 640px image down to ~110px
+    this.sprite.setSize(50); // scale the 640px image down to ~110px
 
     this.container.addChild(this.sprite);
     this.container.position.set(x, y);
