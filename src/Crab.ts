@@ -1,9 +1,11 @@
 import { AnimatedSprite, Container, Graphics } from "pixi.js";
 import { buildCrabWalkFrames, type CrabFrames } from "./crabAnimation";
-import { ARENA_MARGIN, COLORS, CRAB_SIZE, DESIGN_WIDTH, MOVE_SPEED, WHIP_ACTIVE, WHIP_COOLDOWN, WHIP_REACH, WHIP_RECOVER, WHIP_WINDUP } from "./config";
+import { ARENA_MARGIN, COLORS, CRAB_SIZE, DESIGN_WIDTH, MAX_HP, MOVE_SPEED, WHIP_ACTIVE, WHIP_COOLDOWN, WHIP_REACH, WHIP_RECOVER, WHIP_WINDUP } from "./config";
 
 const WALK_SPEED = 0.15; // how fast the legs shuffle through the cycle
 const WHIP_TOTAL = WHIP_WINDUP + WHIP_ACTIVE + WHIP_RECOVER;
+export interface Rect { x: number; y: number; w: number; h: number; }
+
 
 // The player character. Its walk cycle is an AnimatedSprite whose frames are
 // generated from crab.png at load time (see crabAnimation.ts).
@@ -16,7 +18,8 @@ export class Crab {
   private whipGfx: Graphics;
   private whipFrame = -1; // -1 means idle; 0..TOTAL means mid-swing.
   private cooldown = 0;
-
+  hp = MAX_HP;
+  private hitDone = false;
 
   private sprite: AnimatedSprite;
   private frames: CrabFrames;
@@ -49,8 +52,42 @@ export class Crab {
   }
 
   attack() {
-    if (this.whipFrame < 0 && this.cooldown <= 0) this.whipFrame = 0;
+    if (this.whipFrame < 0 && this.cooldown <= 0) {
+      this.whipFrame = 0;
+      this.hitDone = false;
+    }
   }
+
+  body(): Rect {
+    const w = CRAB_SIZE * 0.7;
+    const h = CRAB_SIZE * 0.9;
+    return { x: this.x - w / 2, y: this.y - h / 2, w, h };
+  }
+
+  whipBox(): Rect {
+    const near = CRAB_SIZE * 0.3;
+    const far = near + WHIP_REACH;
+    const h = CRAB_SIZE * 0.8;
+    const x = this.facing >= 0 ? this.x + near : this.x - far;
+    return { x, y: this.y - h / 2, w: far - near, h };
+  }
+
+  whipActive(): boolean {
+    return (
+      this.whipFrame >= WHIP_WINDUP &&
+      this.whipFrame < WHIP_WINDUP + WHIP_ACTIVE &&
+      !this.hitDone
+    );
+  }
+
+  markHit() {
+    this.hitDone = true;
+  }
+
+  hit(damage: number) {
+    this.hp = Math.max(0, this.hp - damage);
+  }
+
 
   // Called every frame. `direction`: 0 = standing, +1 = forward, -1 = backward.
   update(delta: number) {
