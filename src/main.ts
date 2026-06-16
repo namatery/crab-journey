@@ -1,23 +1,34 @@
-import { Application, Container, Graphics } from "pixi.js";
-import { COLORS, CRAB_SIZE, DESIGN_HEIGHT, DESIGN_WIDTH, GROUND_Y, WHIP_DAMAGE } from "./config";
+import { Application, Container, Graphics, TextureSource } from "pixi.js";
+import {
+  COLORS,
+  CRAB_SIZE,
+  DESIGN_HEIGHT,
+  DESIGN_WIDTH,
+  GROUND_Y,
+  WHIP_DAMAGE,
+} from "./config";
 import { Input } from "./Input";
 import { World } from "./World";
-import { Stars } from "./Stars";
-import { Moon } from "./Moon";
-import { Crab, type Rect } from "./Crab";
+import { Sun } from "./Sun";
+import { Cactus } from "./Cactus";
+import { Crab, type Rect, type CrabState } from "./Crab";
 import { Hud } from "./Hud";
+import { showLobby } from "./lobby";
 
+TextureSource.defaultOptions.scaleMode = "nearest";
 
 function overlap(a: Rect, b: Rect): boolean {
-  return a.x < b.x + b.w && a.x + a.w > b.x
-      && a.y < b.y + b.h && a.y + a.h > b.y;
+  return (
+    a.x < b.x + b.w && a.x + a.w > b.x && a.y < b.y + b.h && a.y + a.h > b.y
+  );
 }
 
-
 (async () => {
+  const { net, role } = await showLobby();
+
   // Boot PixiJS and attach the canvas to the page.
   const app = new Application();
-  await app.init({ background: COLORS.background, resizeTo: window });
+  await app.init({ background: COLORS.sky, resizeTo: window });
   document.getElementById("pixi-container")!.appendChild(app.canvas);
 
   const root = new Container();
@@ -26,11 +37,14 @@ function overlap(a: Rect, b: Rect): boolean {
   root.addChild(debug);
 
   function layout() {
-    const s = Math.min(app.screen.width / DESIGN_WIDTH, app.screen.height / DESIGN_HEIGHT)
-    root.scale.set(s)
+    const s = Math.min(
+      app.screen.width / DESIGN_WIDTH,
+      app.screen.height / DESIGN_HEIGHT,
+    );
+    root.scale.set(s);
 
-    root.x = (app.screen.width - DESIGN_WIDTH * s) / 2
-    root.y = (app.screen.height - DESIGN_HEIGHT * s) / 2
+    root.x = (app.screen.width - DESIGN_WIDTH * s) / 2;
+    root.y = (app.screen.height - DESIGN_HEIGHT * s) / 2;
   }
 
   layout();
@@ -41,45 +55,71 @@ function overlap(a: Rect, b: Rect): boolean {
 
   const input = new Input();
   const world = new World(groundY);
-  const moon = new Moon(DESIGN_WIDTH * 0.78, DESIGN_HEIGHT * 0.22);
-  const stars = new Stars(DESIGN_WIDTH, groundY);
+  const sun = await Sun.create(DESIGN_WIDTH * 0.82, DESIGN_HEIGHT * 0.2);
+  const cactusLeft = await Cactus.create(160, GROUND_Y, 190);
+  const cactusRight = await Cactus.create(1120, GROUND_Y, 150);
   const hud = new Hud();
   // Center anchor + 50px size → feet are 25px below the position, so place the
   // crab a half-height above groundY to rest its feet on the ground line.
-  const crab = await Crab.create("/assets/crab.png", DESIGN_WIDTH * 0.3, GROUND_Y - CRAB_SIZE / 2, 1)
+  const leftCrab = await Crab.create(
+    "/assets/crab.png",
+    DESIGN_WIDTH * 0.3,
+    GROUND_Y - CRAB_SIZE / 2,
+    1,
+  );
+  const rightCrab = await Crab.create(
+    "/assets/crab.png",
+    DESIGN_WIDTH * 0.7,
+    GROUND_Y - CRAB_SIZE / 2,
+    -1,
+  );
 
-  const dummy = await Crab.create("/assets/crab.png", DESIGN_WIDTH * 0.7, GROUND_Y - CRAB_SIZE / 2, -1);
-  root.addChild(dummy.container);
-
-  // Draw order (back to front): world, moon, stars, crab.
+  // Draw order (back to front): sky, scenery, crabs, HUD.
   root.addChild(world.container);
-  root.addChild(moon.container);
-  root.addChild(stars.container);
-  root.addChild(crab.container);
+  root.addChild(sun.container);
+  root.addChild(cactusLeft.container);
+  root.addChild(cactusRight.container);
+  root.addChild(leftCrab.container);
+  root.addChild(rightCrab.container);
   root.addChild(hud.container);
 
-  // The game loop: read input, move the world, twinkle the sky.
+  const mine = role === "host" ? leftCrab : rightCrab;
+  const theirs = role === "host" ? rightCrab : leftCrab;
+  theirs.isLocal = false;
+
+  net.onData = (msg) => {
+    const m = msg as { t: string; s?: CrabState };
+    if (m.t === "state" && m.s) {
+      theirs.applyState(m.s); // copy their crab's position/whip/hp
+    } else if (m.t === "hit") {
+      mine.hit(WHIP_DAMAGE, theirs.facing); // they hit me → I lose my own HP
+    }
+  };
+
+  // The game loop: read input, move the world.
   app.ticker.add((time) => {
     const delta = time.deltaTime;
 
-    const movingRight = input.isDown("d");
-    const movingLeft = input.isDown("a");
-    if (input.justPressed(" ")) crab.attack();
+    // Drive MY crab from the keyboard.
+    const direction =
+      (input.isDown("d") ? 1 : 0) + (input.isDown("a") ? -1 : 0);
+    mine.setMove(direction);
+    if (input.justPressed(" ")) mine.attack();
 
-    // +1 = forward, -1 = backward, 0 = standing (both/neither held).
-    const direction = (movingRight ? 1 : 0) + (movingLeft ? -1 : 0);
-    crab.setMove(direction);
-    crab.update(delta);
-    dummy.update(delta);
+    // mine simulates; theirs just renders the last synced state.
+    mine.update(delta);
+    theirs.update(delta);
 
-    if (crab.whipActive() && overlap(crab.whipBox(), dummy.body())) {
-      crab.markHit();
-      dummy.hit(WHIP_DAMAGE, crab.facing);
-      console.log("HIT! dummy hp:", dummy.hp);
+    // Broadcast my crab's state to the opponent every frame.
+    net.send({ t: "state", s: mine.netState() });
+
+    // If my whip connects, tell them to take damage (they own their HP).
+    if (mine.whipActive() && overlap(mine.whipBox(), theirs.body())) {
+      mine.markHit();
+      net.send({ t: "hit" });
     }
 
-    hud.update(crab.hp, dummy.hp);
-    stars.update(delta);
+    hud.update(leftCrab.hp, rightCrab.hp);
   });
 
   app.stage.addChild(root);

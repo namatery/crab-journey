@@ -1,5 +1,6 @@
 <!doctype html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/png" href="/favicon.png" />
@@ -13,5 +14,21 @@
         <div id="pixi-container"></div>
     </div>
     <script type="module" src="/src/main.ts"></script>
+
+    <div id="lobby">
+        <h1>🦀 Crab Duel</h1>
+
+        <div class="row">
+            <button id="host-btn">Host</button>
+            <span id="host-info"></span>
+        </div>
+        <div class="row">
+            <input id="join-input" placeholder="room code" autocomplete="off" />
+            <button id="join-btn">Join</button>
+        </div>
+        <p id="status"></p>
+    </div>
+
 </body>
+
 </html>

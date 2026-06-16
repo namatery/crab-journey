@@ -1,21 +1,11 @@
 // All the "magic numbers" and colors live here, so the mood is tunable in one place.
 
 export const COLORS = {
-  background: "#0d0d0e",
-  star: "#ffed24",
-  crab: "#D97757",
-  moon: "#ffffff",
-  ground: "#ffffff",
+  sky: "#8ecae6", // daytime desert sky (the app background)
+  sand: "#e3c184", // sun-baked ground
+  sandShadow: "#caa25c", // a darker band right at the horizon
+  crab: "#d97757", // terracotta crab (body tint + whip)
 };
-
-// Thickness of the white ground line (px).
-export const GROUND_LINE_WIDTH = 1;
-
-export const STAR_COUNT = 60;
-
-// Twinkle feel: speed = how fast stars pulse, depth = how much they brighten/dim.
-export const TWINKLE_SPEED = 0.05;
-export const TWINKLE_DEPTH = 0.2;
 
 // --- Duel arena ---------------------------------------------------------
 // The whole game is laid out in this fixed "design" resolution and then scaled

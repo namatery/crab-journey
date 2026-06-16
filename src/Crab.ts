@@ -1,11 +1,39 @@
 import { AnimatedSprite, Container, Graphics } from "pixi.js";
 import { buildCrabWalkFrames, type CrabFrames } from "./crabAnimation";
-import { ARENA_MARGIN, COLORS, CRAB_SIZE, DESIGN_WIDTH, HIT_FLASH, KNOCKBACK, KNOCKBACK_DECAY, MAX_HP, MOVE_SPEED, WHIP_ACTIVE, WHIP_COOLDOWN, WHIP_REACH, WHIP_RECOVER, WHIP_WINDUP } from "./config";
+import {
+  ARENA_MARGIN,
+  COLORS,
+  CRAB_SIZE,
+  DESIGN_WIDTH,
+  HIT_FLASH,
+  KNOCKBACK,
+  KNOCKBACK_DECAY,
+  MAX_HP,
+  MOVE_SPEED,
+  WHIP_ACTIVE,
+  WHIP_COOLDOWN,
+  WHIP_REACH,
+  WHIP_RECOVER,
+  WHIP_WINDUP,
+} from "./config";
 
 const WALK_SPEED = 0.15; // how fast the legs shuffle through the cycle
 const WHIP_TOTAL = WHIP_WINDUP + WHIP_ACTIVE + WHIP_RECOVER;
-export interface Rect { x: number; y: number; w: number; h: number; }
+export interface Rect {
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+}
 
+export interface CrabState {
+  x: number;
+  facing: number;
+  moving: number;
+  whipFrame: number;
+  hp: number;
+  flash: number;
+}
 
 // The player character. Its walk cycle is an AnimatedSprite whose frames are
 // generated from crab.png at load time (see crabAnimation.ts).
@@ -14,6 +42,7 @@ export class Crab {
   x: number;
   y: number;
   facing: number;
+  isLocal = true;
 
   private whipGfx: Graphics;
   private whipFrame = -1; // -1 means idle; 0..TOTAL means mid-swing.
@@ -29,7 +58,12 @@ export class Crab {
   private knockbackVx = 0; // sideways shove velocity, decays to 0
   private flash = 0; // frames of red tint remaining
 
-  static async create(url: string, x: number, y: number, facing = 1): Promise<Crab> {
+  static async create(
+    url: string,
+    x: number,
+    y: number,
+    facing = 1,
+  ): Promise<Crab> {
     const frames = await buildCrabWalkFrames(url);
     return new Crab(frames, x, y, facing);
   }
@@ -41,7 +75,7 @@ export class Crab {
     this.whipGfx = new Graphics();
     this.sprite = new AnimatedSprite(frames.walk);
     this.sprite.anchor.set(0.5);
-    this.sprite.setSize(CRAB_SIZE); 
+    this.sprite.setSize(CRAB_SIZE);
     this.sprite.texture = frames.rest;
 
     this.container.addChild(this.sprite);
@@ -93,30 +127,68 @@ export class Crab {
     this.flash = HIT_FLASH;
   }
 
+  netState(): CrabState {
+    return {
+      x: this.x,
+      facing: this.facing,
+      moving: this.moving,
+      whipFrame: this.whipFrame,
+      hp: this.hp,
+      flash: this.flash,
+    };
+  }
+
+  applyState(s: CrabState) {
+    this.x = s.x;
+    this.facing = s.facing;
+    this.moving = s.moving;
+    this.whipFrame = s.whipFrame;
+    this.hp = s.hp;
+    this.flash = s.flash;
+  }
+
   // Called every frame. `direction`: 0 = standing, +1 = forward, -1 = backward.
   update(delta: number) {
+    // --- Simulation: only the crab's OWNER runs this. ---
+    if (this.isLocal) {
+      if (this.moving != 0) {
+        this.x += this.moving * MOVE_SPEED * delta;
+      }
+      this.x += this.knockbackVx * delta;
+      this.knockbackVx *= KNOCKBACK_DECAY;
+      this.x = Math.max(
+        ARENA_MARGIN,
+        Math.min(DESIGN_WIDTH - ARENA_MARGIN, this.x),
+      );
+
+      if (this.whipFrame >= 0) {
+        this.whipFrame += delta;
+        if (this.whipFrame >= WHIP_TOTAL) {
+          this.whipFrame = -1;
+          this.cooldown = WHIP_COOLDOWN;
+        }
+      } else if (this.cooldown > 0) {
+        this.cooldown -= delta;
+      }
+
+      if (this.moving != 0) {
+        this.facing = Math.sign(this.moving);
+      }
+
+      if (this.flash > 0) this.flash -= delta;
+    }
+
     if (this.moving != 0) {
       this.x += this.moving * MOVE_SPEED * delta;
     }
     this.x += this.knockbackVx * delta; // the shove
     this.knockbackVx *= KNOCKBACK_DECAY; // bleed it off each frame
-    this.x = Math.max(ARENA_MARGIN, Math.min(DESIGN_WIDTH - ARENA_MARGIN, this.x));
+    this.x = Math.max(
+      ARENA_MARGIN,
+      Math.min(DESIGN_WIDTH - ARENA_MARGIN, this.x),
+    );
 
-    if (this.whipFrame >= 0) {
-      this.whipFrame += delta;
-      if (this.whipFrame >= WHIP_TOTAL) {
-        this.whipFrame = -1;
-        this.cooldown = WHIP_COOLDOWN;
-      }
-    } else if (this.cooldown > 0) {
-      this.cooldown -= delta;
-    }
-
-    if (this.moving != 0) {
-      this.facing = Math.sign(this.moving);
-    }
-
-    if (this.flash > 0) this.flash -= delta;
+    // --- Render: BOTH crabs run this, using current x / facing / moving / whipFrame / flash. ---
     this.sprite.tint = this.flash > 0 ? 0xff5555 : 0xffffff;
 
     const mag = Math.abs(this.sprite.scale.x);
@@ -139,25 +211,24 @@ export class Crab {
 
   private whipExtension(): number {
     const f = this.whipFrame;
-    if (f < 0) return 0;                                       // idle: no lash
-    if (f < WHIP_WINDUP) return f / WHIP_WINDUP;               // 0→1: shooting out
-    if (f < WHIP_WINDUP + WHIP_ACTIVE) return 1;               // hold: fully cracked
-    const r = (f - WHIP_WINDUP - WHIP_ACTIVE) / WHIP_RECOVER;  // 0→1 across recover
-    return 1 - r;                                              // 1→0: retracting
+    if (f < 0) return 0; // idle: no lash
+    if (f < WHIP_WINDUP) return f / WHIP_WINDUP; // 0→1: shooting out
+    if (f < WHIP_WINDUP + WHIP_ACTIVE) return 1; // hold: fully cracked
+    const r = (f - WHIP_WINDUP - WHIP_ACTIVE) / WHIP_RECOVER; // 0→1 across recover
+    return 1 - r; // 1→0: retracting
   }
 
   private drawWhip(extend: number) {
     const g = this.whipGfx;
-    g.clear();                     // erase last frame
-    if (extend <= 0.02) return;    // idle / fully retracted → draw nothing
+    g.clear(); // erase last frame
+    if (extend <= 0.02) return; // idle / fully retracted → draw nothing
 
-    const dir = this.facing >= 0 ? 1 : -1;      // which way the crab faces
-    const startX = dir * CRAB_SIZE * 0.34;      // start just past the body edge
-    const tipX = startX + dir * WHIP_REACH * extend;  // tip = reach × how-extended
-     
-    g.moveTo(startX, 0)            // pen at the crab's front
-     .lineTo(tipX, 0)             // drag out to the tip
-     .stroke({ width: 3, color: COLORS.crab, cap: "round" });
+    const dir = this.facing >= 0 ? 1 : -1; // which way the crab faces
+    const startX = dir * CRAB_SIZE * 0.34; // start just past the body edge
+    const tipX = startX + dir * WHIP_REACH * extend; // tip = reach × how-extended
+
+    g.moveTo(startX, 0) // pen at the crab's front
+      .lineTo(tipX, 0) // drag out to the tip
+      .stroke({ width: 3, color: COLORS.crab, cap: "round" });
   }
-
 }

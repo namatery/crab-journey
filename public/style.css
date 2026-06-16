@@ -13,3 +13,48 @@ body {
     justify-content: center;
     align-items: center;
 }
+
+#lobby {
+    position: fixed;
+    inset: 0;
+    z-index: 10;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    justify-content: center;
+    align-items: center;
+    background: #0d0d0e;
+    font-family: system-ui, sans-serif;
+}
+
+#lobby .row {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
+#lobby button,
+#lobby input {
+    font-size: 18px;
+    padding: 8px 16px;
+    border-radius: 8px;
+    border: 1px solid #444;
+    background: #1a1a1c;
+    color: #eee;
+}
+
+#lobby button {
+    cursor: pointer;
+    background: #D97757;
+    border: none;
+}
+
+#lobby #host-info {
+    font-family: monospace;
+    font-size: 22px;
+    letter-spacing: 2px;
+}
+
+.hidden {
+    display: none !important;
+}

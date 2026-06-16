@@ -33,5 +33,4 @@ export class Hud {
     const fillX = drainsRight ? barX + (BAR_W - fillW) : barX;
     g.rect(fillX, MARGIN, fillW, BAR_H).fill(0x00cc66);
   }
-
 }
