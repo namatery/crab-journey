@@ -1,6 +1,6 @@
 import { AnimatedSprite, Container, Graphics } from "pixi.js";
 import { buildCrabWalkFrames, type CrabFrames } from "./crabAnimation";
-import { ARENA_MARGIN, COLORS, CRAB_SIZE, DESIGN_WIDTH, MAX_HP, MOVE_SPEED, WHIP_ACTIVE, WHIP_COOLDOWN, WHIP_REACH, WHIP_RECOVER, WHIP_WINDUP } from "./config";
+import { ARENA_MARGIN, COLORS, CRAB_SIZE, DESIGN_WIDTH, HIT_FLASH, KNOCKBACK, KNOCKBACK_DECAY, MAX_HP, MOVE_SPEED, WHIP_ACTIVE, WHIP_COOLDOWN, WHIP_REACH, WHIP_RECOVER, WHIP_WINDUP } from "./config";
 
 const WALK_SPEED = 0.15; // how fast the legs shuffle through the cycle
 const WHIP_TOTAL = WHIP_WINDUP + WHIP_ACTIVE + WHIP_RECOVER;
@@ -24,7 +24,10 @@ export class Crab {
   private sprite: AnimatedSprite;
   private frames: CrabFrames;
   private bobTime = 0;
-  private moving = 0;   // -1 / 0 / +1
+  private moving = 0; // -1 / 0 / +1
+
+  private knockbackVx = 0; // sideways shove velocity, decays to 0
+  private flash = 0; // frames of red tint remaining
 
   static async create(url: string, x: number, y: number, facing = 1): Promise<Crab> {
     const frames = await buildCrabWalkFrames(url);
@@ -84,17 +87,20 @@ export class Crab {
     this.hitDone = true;
   }
 
-  hit(damage: number) {
+  hit(damage: number, fromDir: number) {
     this.hp = Math.max(0, this.hp - damage);
+    this.knockbackVx = KNOCKBACK * fromDir;
+    this.flash = HIT_FLASH;
   }
-
 
   // Called every frame. `direction`: 0 = standing, +1 = forward, -1 = backward.
   update(delta: number) {
     if (this.moving != 0) {
       this.x += this.moving * MOVE_SPEED * delta;
-      this.x = Math.max(ARENA_MARGIN, Math.min(DESIGN_WIDTH - ARENA_MARGIN, this.x));
     }
+    this.x += this.knockbackVx * delta; // the shove
+    this.knockbackVx *= KNOCKBACK_DECAY; // bleed it off each frame
+    this.x = Math.max(ARENA_MARGIN, Math.min(DESIGN_WIDTH - ARENA_MARGIN, this.x));
 
     if (this.whipFrame >= 0) {
       this.whipFrame += delta;
@@ -106,10 +112,12 @@ export class Crab {
       this.cooldown -= delta;
     }
 
-
     if (this.moving != 0) {
       this.facing = Math.sign(this.moving);
     }
+
+    if (this.flash > 0) this.flash -= delta;
+    this.sprite.tint = this.flash > 0 ? 0xff5555 : 0xffffff;
 
     const mag = Math.abs(this.sprite.scale.x);
     this.sprite.scale.x = mag * (this.facing >= 0 ? 1 : -1);

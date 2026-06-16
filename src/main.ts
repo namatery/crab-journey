@@ -64,7 +64,7 @@ function overlap(a: Rect, b: Rect): boolean {
 
     const movingRight = input.isDown("d");
     const movingLeft = input.isDown("a");
-    if (input.isDown(" ")) crab.attack();
+    if (input.justPressed(" ")) crab.attack();
 
     // +1 = forward, -1 = backward, 0 = standing (both/neither held).
     const direction = (movingRight ? 1 : 0) + (movingLeft ? -1 : 0);
@@ -74,26 +74,11 @@ function overlap(a: Rect, b: Rect): boolean {
 
     if (crab.whipActive() && overlap(crab.whipBox(), dummy.body())) {
       crab.markHit();
-      dummy.hit(WHIP_DAMAGE);
+      dummy.hit(WHIP_DAMAGE, crab.facing);
       console.log("HIT! dummy hp:", dummy.hp);
     }
 
-    debug.clear();
-    for (const c of [crab, dummy]) {
-      // body = green hurt box
-      const b = c.body();
-      debug.rect(b.x, b.y, b.w, b.h).fill({ color: 0x00ff00, alpha: 0.25 });
-
-      // whip reach box = faint normally, bright red during the live window
-      const w = c.whipBox();
-      const live = c.whipActive();
-      debug
-        .rect(w.x, w.y, w.w, w.h)
-        .fill({ color: live ? 0xff0000 : 0xffffff, alpha: live ? 0.45 : 0.08 });
-    }
-
     hud.update(crab.hp, dummy.hp);
-
     stars.update(delta);
   });
 
