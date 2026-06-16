@@ -5,6 +5,7 @@ import { World } from "./World";
 import { Stars } from "./Stars";
 import { Moon } from "./Moon";
 import { Crab, type Rect } from "./Crab";
+import { Hud } from "./Hud";
 
 
 function overlap(a: Rect, b: Rect): boolean {
@@ -37,11 +38,12 @@ function overlap(a: Rect, b: Rect): boolean {
 
   // Build the pieces of the game.
   const groundY = GROUND_Y;
-  
+
   const input = new Input();
   const world = new World(groundY);
   const moon = new Moon(DESIGN_WIDTH * 0.78, DESIGN_HEIGHT * 0.22);
   const stars = new Stars(DESIGN_WIDTH, groundY);
+  const hud = new Hud();
   // Center anchor + 50px size → feet are 25px below the position, so place the
   // crab a half-height above groundY to rest its feet on the ground line.
   const crab = await Crab.create("/assets/crab.png", DESIGN_WIDTH * 0.3, GROUND_Y - CRAB_SIZE / 2, 1)
@@ -54,6 +56,7 @@ function overlap(a: Rect, b: Rect): boolean {
   root.addChild(moon.container);
   root.addChild(stars.container);
   root.addChild(crab.container);
+  root.addChild(hud.container);
 
   // The game loop: read input, move the world, twinkle the sky.
   app.ticker.add((time) => {
@@ -75,20 +78,21 @@ function overlap(a: Rect, b: Rect): boolean {
       console.log("HIT! dummy hp:", dummy.hp);
     }
 
-      debug.clear();
-  for (const c of [crab, dummy]) {
-    // body = green hurt box
-    const b = c.body();
-    debug.rect(b.x, b.y, b.w, b.h).fill({ color: 0x00ff00, alpha: 0.25 });
+    debug.clear();
+    for (const c of [crab, dummy]) {
+      // body = green hurt box
+      const b = c.body();
+      debug.rect(b.x, b.y, b.w, b.h).fill({ color: 0x00ff00, alpha: 0.25 });
 
-    // whip reach box = faint normally, bright red during the live window
-    const w = c.whipBox();
-    const live = c.whipActive();
-    debug
-      .rect(w.x, w.y, w.w, w.h)
-      .fill({ color: live ? 0xff0000 : 0xffffff, alpha: live ? 0.45 : 0.08 });
-  }
+      // whip reach box = faint normally, bright red during the live window
+      const w = c.whipBox();
+      const live = c.whipActive();
+      debug
+        .rect(w.x, w.y, w.w, w.h)
+        .fill({ color: live ? 0xff0000 : 0xffffff, alpha: live ? 0.45 : 0.08 });
+    }
 
+    hud.update(crab.hp, dummy.hp);
 
     stars.update(delta);
   });

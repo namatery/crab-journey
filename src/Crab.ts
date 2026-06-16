@@ -14,7 +14,7 @@ export class Crab {
   x: number;
   y: number;
   facing: number;
-  
+
   private whipGfx: Graphics;
   private whipFrame = -1; // -1 means idle; 0..TOTAL means mid-swing.
   private cooldown = 0;
@@ -47,7 +47,7 @@ export class Crab {
     this.facing = facing;
   }
 
-  setMove(dir: number) { 
+  setMove(dir: number) {
     this.moving = dir;
   }
 
