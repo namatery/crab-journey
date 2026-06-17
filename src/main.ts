@@ -9,6 +9,10 @@ import {
 } from "./config";
 import { Input } from "./Input";
 import { World } from "./World";
+import { Sky } from "./Sky";
+import { Clouds } from "./Clouds";
+import { Dust } from "./Dust";
+import { Tumbleweed } from "./Tumbleweed";
 import { Sun } from "./Sun";
 import { Cactus } from "./Cactus";
 import { Crab, type Rect, type CrabState } from "./Crab";
@@ -54,8 +58,12 @@ function overlap(a: Rect, b: Rect): boolean {
   const groundY = GROUND_Y;
 
   const input = new Input();
+  const sky = new Sky();
+  const clouds = new Clouds();
   const world = new World(groundY);
-  const sun = await Sun.create(DESIGN_WIDTH * 0.82, DESIGN_HEIGHT * 0.2);
+  const tumbleweed = new Tumbleweed();
+  const dust = new Dust();
+  const sun = new Sun(DESIGN_WIDTH * 0.82, DESIGN_HEIGHT * 0.2);
   const cactusLeft = await Cactus.create(160, GROUND_Y, 190);
   const cactusRight = await Cactus.create(1120, GROUND_Y, 150);
   const hud = new Hud();
@@ -66,19 +74,26 @@ function overlap(a: Rect, b: Rect): boolean {
     DESIGN_WIDTH * 0.3,
     GROUND_Y - CRAB_SIZE / 2,
     1,
+    COLORS.crabHost,
   );
   const rightCrab = await Crab.create(
     "/assets/crab.png",
     DESIGN_WIDTH * 0.7,
     GROUND_Y - CRAB_SIZE / 2,
     -1,
+    COLORS.crabGuest,
   );
 
-  // Draw order (back to front): sky, scenery, crabs, HUD.
-  root.addChild(world.container);
+  // Draw order (back to front): sky + dunes, clouds, sun, ground, tumbleweed,
+  // cacti, blowing dust, crabs, HUD.
+  root.addChild(sky.container);
+  root.addChild(clouds.container);
   root.addChild(sun.container);
+  root.addChild(world.container);
+  root.addChild(tumbleweed.container);
   root.addChild(cactusLeft.container);
   root.addChild(cactusRight.container);
+  root.addChild(dust.container);
   root.addChild(leftCrab.container);
   root.addChild(rightCrab.container);
   root.addChild(hud.container);
@@ -99,6 +114,11 @@ function overlap(a: Rect, b: Rect): boolean {
   // The game loop: read input, move the world.
   app.ticker.add((time) => {
     const delta = time.deltaTime;
+
+    // Ambient scenery (purely local — no need to sync between players).
+    clouds.update(delta);
+    dust.update(delta);
+    tumbleweed.update(delta);
 
     // Drive MY crab from the keyboard.
     const direction =

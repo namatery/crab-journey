@@ -24,6 +24,7 @@ export interface CrabFrames {
 export async function buildCrabWalkFrames(
   url: string,
   frameCount = 8,
+  color?: string,
 ): Promise<CrabFrames> {
   const bitmap = await createImageBitmap(await (await fetch(url)).blob());
   const w = bitmap.width;
@@ -59,6 +60,36 @@ export async function buildCrabWalkFrames(
   }
   const legBandTop = hipY + 1;
   const legBandH = legsBottom - hipY;
+
+  // --- Recolor the (flat) crab into a livelier tone --------------------
+  // The art is a single solid color, so a tint could only darken it. Instead
+  // we repaint every opaque pixel to `color`, shaded from a bright top to a
+  // darker belly so the crab reads as rounded rather than a flat cut-out.
+  if (color) {
+    let contentTop = 0;
+    for (let y = 0; y < h; y++)
+      if (rowWidth[y] > 0) {
+        contentTop = y;
+        break;
+      }
+    const [br, bg, bb] = hexToRgb(color);
+    const span = Math.max(1, legsBottom - contentTop);
+    const img = sctx.getImageData(0, 0, w, h);
+    const px = img.data;
+    for (let y = 0; y < h; y++) {
+      const t = (y - contentTop) / span; // 0 at the top of the crab, 1 at feet
+      const shade = 1.18 - 0.46 * Math.min(1, Math.max(0, t));
+      for (let x = 0; x < w; x++) {
+        const i = (y * w + x) * 4;
+        if (px[i + 3] > 0) {
+          px[i] = clamp8(br * shade);
+          px[i + 1] = clamp8(bg * shade);
+          px[i + 2] = clamp8(bb * shade);
+        }
+      }
+    }
+    sctx.putImageData(img, 0, 0);
+  }
 
   // --- Split the leg band into individual legs (contiguous column runs). ---
   const legs: Leg[] = [];
@@ -137,3 +168,10 @@ export async function buildCrabWalkFrames(
 
   return { walk, rest };
 }
+
+function hexToRgb(hex: string): [number, number, number] {
+  const n = parseInt(hex.replace("#", ""), 16);
+  return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
+}
+
+const clamp8 = (v: number) => Math.max(0, Math.min(255, Math.round(v)));

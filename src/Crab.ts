@@ -43,6 +43,7 @@ export class Crab {
   y: number;
   facing: number;
   isLocal = true;
+  color: string;
 
   private whipGfx: Graphics;
   private whipFrame = -1; // -1 means idle; 0..TOTAL means mid-swing.
@@ -63,15 +64,23 @@ export class Crab {
     x: number,
     y: number,
     facing = 1,
+    color = COLORS.crab,
   ): Promise<Crab> {
-    const frames = await buildCrabWalkFrames(url);
-    return new Crab(frames, x, y, facing);
+    const frames = await buildCrabWalkFrames(url, 8, color);
+    return new Crab(frames, x, y, facing, color);
   }
 
-  constructor(frames: CrabFrames, x: number, y: number, facing = 1) {
+  constructor(
+    frames: CrabFrames,
+    x: number,
+    y: number,
+    facing = 1,
+    color = COLORS.crab,
+  ) {
     this.frames = frames;
     this.x = x;
     this.y = y;
+    this.color = color;
     this.whipGfx = new Graphics();
     this.sprite = new AnimatedSprite(frames.walk);
     this.sprite.anchor.set(0.5);
@@ -229,6 +238,6 @@ export class Crab {
 
     g.moveTo(startX, 0) // pen at the crab's front
       .lineTo(tipX, 0) // drag out to the tip
-      .stroke({ width: 3, color: COLORS.crab, cap: "round" });
+      .stroke({ width: 3, color: this.color, cap: "round" });
   }
 }
