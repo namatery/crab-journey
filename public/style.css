@@ -14,45 +14,239 @@ body {
     align-items: center;
 }
 
+/* ── Pixel-art desert lobby ───────────────────────────────────────────────
+   Palette mirrors src/config.ts so the lobby and the game share one mood:
+   sky #8ecae6 · sand #e3c184 · sandShadow #caa25c · crab/terracotta #d97757 */
+
+/* The whole scene mirrors the game's design space (1280x720, ground at y=600),
+   so the lobby reads as the duel's opening shot: same flat sky, same horizon,
+   same sun / cacti / crabs, rendered from the very same sprite assets. */
 #lobby {
     position: fixed;
     inset: 0;
     z-index: 10;
+    /* horizon sits 600/720 of the way down, matching GROUND_Y in config.ts */
+    --sand: 16.67%;
     display: flex;
-    flex-direction: column;
-    gap: 16px;
     justify-content: center;
     align-items: center;
-    background: #0d0d0e;
-    font-family: system-ui, sans-serif;
+    overflow: hidden;
+    background: #8ecae6;
+    /* COLORS.sky — the same flat daytime sky the game boots with */
+    font-family: "Press Start 2P", monospace;
+    -webkit-font-smoothing: none;
 }
 
-#lobby .row {
+/* Sprites keep their crisp pixels when scaled, like the game's "nearest" mode. */
+#lobby .sun,
+#lobby .cactus,
+#lobby .crab {
+    position: absolute;
+    image-rendering: pixelated;
+    pointer-events: none;
+    user-select: none;
+}
+
+/* The pixel-art sun, hung where the game places it (DESIGN 0.82, 0.2). */
+#lobby .sun {
+    top: 6%;
+    right: 9%;
+    width: clamp(110px, 15vw, 210px);
+    height: auto;
+}
+
+/* Saguaros standing on the horizon, one tall + one short, framing the arena. */
+#lobby .cactus {
+    bottom: calc(var(--sand) - 1%);
+    height: clamp(150px, 26vh, 300px);
+    width: auto;
+}
+
+#lobby .cactus-left {
+    left: 4%;
+}
+
+#lobby .cactus-right {
+    right: 4%;
+    height: clamp(120px, 21vh, 240px);
+    /* a touch shorter, like the 150px cactus in main.ts */
+    transform: scaleX(-1);
+}
+
+/* The two duelists waiting on the sand, facing each other across the menu. */
+#lobby .crab {
+    bottom: calc(var(--sand) - 2%);
+    width: clamp(72px, 9vw, 120px);
+    height: auto;
+}
+
+#lobby .crab-left {
+    left: 16%;
+    animation: crab-bob 1.6s steps(2, end) infinite;
+}
+
+#lobby .crab-right {
+    right: 16%;
+    transform: scaleX(-1);
+    /* faces the host crab, mirroring rightCrab's facing = -1 */
+    animation: crab-bob-flip 1.6s steps(2, end) infinite 0.8s;
+}
+
+/* A two-step hop keeps the idle lively without breaking the pixel feel. */
+@keyframes crab-bob {
+    0%, 50% { transform: translateY(0); }
+    51%, 100% { transform: translateY(-8px); }
+}
+
+@keyframes crab-bob-flip {
+    0%, 50% { transform: scaleX(-1) translateY(0); }
+    51%, 100% { transform: scaleX(-1) translateY(-8px); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    #lobby .crab { animation: none; }
+}
+
+/* The sun-baked ground, with the same hard shadow line at the horizon. */
+#lobby .sand {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    height: var(--sand);
+    background: #e3c184;
+    /* COLORS.sand */
+    border-top: 6px solid #caa25c;
+    /* COLORS.sandShadow */
+}
+
+/* The "game window": a chunky pixel panel with a hard offset shadow. */
+#lobby .panel {
+    position: relative;
+    z-index: 1;
     display: flex;
-    gap: 8px;
+    flex-direction: column;
     align-items: center;
+    gap: 22px;
+    padding: 40px 44px;
+    background: #fff6e6;
+    border: 6px solid #2b2333;
+    box-shadow: 12px 12px 0 rgba(43, 35, 51, 0.35);
+}
+
+#lobby h1 {
+    margin: 0;
+    font-size: 30px;
+    line-height: 1.3;
+    color: #d97757;
+    text-shadow: 4px 4px 0 #a8492e;
+}
+
+#lobby .tagline {
+    margin: -8px 0 4px;
+    font-size: 9px;
+    line-height: 1.6;
+    color: #8a7d6b;
+}
+
+#lobby .section {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+    width: 100%;
 }
 
 #lobby button,
 #lobby input {
-    font-size: 18px;
-    padding: 8px 16px;
-    border-radius: 8px;
-    border: 1px solid #444;
-    background: #1a1a1c;
-    color: #eee;
+    font-family: inherit;
+    font-size: 14px;
+    padding: 16px 20px;
+    border: 4px solid #2b2333;
+    color: #2b2333;
+    outline: none;
 }
 
+/* Pixel buttons depress into their hard shadow when pressed. */
 #lobby button {
     cursor: pointer;
-    background: #D97757;
-    border: none;
+    background: #d97757;
+    color: #fff6e6;
+    text-shadow: 2px 2px 0 #a8492e;
+    box-shadow: 6px 6px 0 #2b2333;
+    transition: transform 0.04s, box-shadow 0.04s, background 0.1s;
 }
 
+#lobby button:hover {
+    background: #e08a6b;
+}
+
+#lobby button:active {
+    transform: translate(6px, 6px);
+    box-shadow: 0 0 0 #2b2333;
+}
+
+#lobby input {
+    background: #fffdf7;
+    text-align: center;
+    letter-spacing: 6px;
+    text-transform: uppercase;
+}
+
+#lobby input::placeholder {
+    color: #b9ac98;
+    letter-spacing: 4px;
+}
+
+#lobby input:focus {
+    border-color: #d97757;
+    background: #fff;
+}
+
+/* The generated room code, shown after hosting. Hidden until it has text. */
 #lobby #host-info {
-    font-family: monospace;
     font-size: 22px;
-    letter-spacing: 2px;
+    letter-spacing: 8px;
+    color: #2b2333;
+    text-align: center;
+    background: #e3c184;
+    border: 4px dashed #caa25c;
+    padding: 14px;
+}
+
+#lobby #host-info:empty {
+    display: none;
+}
+
+/* "or" splitter with a rule on each side. */
+#lobby .divider {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    width: 100%;
+    color: #b9ac98;
+    font-size: 9px;
+}
+
+#lobby .divider::before,
+#lobby .divider::after {
+    content: "";
+    flex: 1;
+    height: 4px;
+    background: #e6dcc8;
+}
+
+#lobby #status {
+    margin: 0;
+    min-height: 12px;
+    font-size: 9px;
+    line-height: 1.6;
+    color: #6f8a4f;
+    text-align: center;
+}
+
+#lobby #status:empty {
+    display: none;
 }
 
 .hidden {
