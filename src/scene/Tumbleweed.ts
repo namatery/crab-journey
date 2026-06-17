@@ -1,5 +1,5 @@
 import { Container, Graphics } from "pixi.js";
-import { COLORS, DESIGN_WIDTH, GROUND_Y, OVERSCAN } from "./config";
+import { COLORS, DESIGN_WIDTH, GROUND_Y, OVERSCAN } from "../config";
 
 // A tumbleweed that rolls across the arena every so often: it waits offscreen,
 // then trundles across the sand spinning and bouncing, then waits again.

@@ -1,5 +1,5 @@
 import { Container, Graphics } from "pixi.js";
-import { COLORS, DESIGN_WIDTH, GROUND_Y, OVERSCAN } from "./config";
+import { COLORS, DESIGN_WIDTH, GROUND_Y, OVERSCAN } from "../config";
 
 // The far background: a banded sky gradient (deeper blue up high, hazy pale at
 // the horizon) with a couple of distant dune ridges peeking over the skyline.

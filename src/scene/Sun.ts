@@ -1,5 +1,5 @@
 import { Container, Graphics } from "pixi.js";
-import { COLORS } from "./config";
+import { COLORS } from "../config";
 
 // A blocky, square pixel-art sun — drawn entirely in code (no texture asset).
 // A solid square body with a sunlit top band and a corner glint for life, a

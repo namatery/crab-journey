@@ -1,5 +1,5 @@
 import { Container, Graphics } from "pixi.js";
-import { COLORS, DESIGN_WIDTH, OVERSCAN } from "./config";
+import { COLORS, DESIGN_WIDTH, OVERSCAN } from "../config";
 
 interface Cloud {
   g: Graphics;

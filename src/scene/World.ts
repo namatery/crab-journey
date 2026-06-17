@@ -1,5 +1,5 @@
 import { Container, Graphics } from "pixi.js";
-import { COLORS, DESIGN_HEIGHT, DESIGN_WIDTH, OVERSCAN } from "./config";
+import { COLORS, DESIGN_HEIGHT, DESIGN_WIDTH, OVERSCAN } from "../config";
 
 // Everything the crab walks past lives inside this container.
 // The crab stays centered; we move the world instead (a simple 2D camera).

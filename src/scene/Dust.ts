@@ -1,5 +1,5 @@
 import { Container, Graphics } from "pixi.js";
-import { COLORS, DESIGN_WIDTH, GROUND_Y, OVERSCAN } from "./config";
+import { COLORS, DESIGN_WIDTH, GROUND_Y, OVERSCAN } from "../config";
 
 interface Speck {
   x: number;

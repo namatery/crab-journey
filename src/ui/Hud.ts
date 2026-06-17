@@ -1,5 +1,5 @@
 import { Container, Graphics } from "pixi.js";
-import { MAX_HP, DESIGN_WIDTH } from "./config";
+import { MAX_HP, DESIGN_WIDTH } from "../config";
 
 const BAR_W = 420;
 const BAR_H = 26;

@@ -7,18 +7,18 @@ import {
   GROUND_Y,
   WHIP_DAMAGE,
 } from "./config";
-import { Input } from "./Input";
-import { Net } from "./Net";
-import { World } from "./World";
-import { Sky } from "./Sky";
-import { Clouds } from "./Clouds";
-import { Dust } from "./Dust";
-import { Tumbleweed } from "./Tumbleweed";
-import { Sun } from "./Sun";
-import { Cactus } from "./Cactus";
-import { Crab, type Rect, type CrabState } from "./Crab";
-import { Hud } from "./Hud";
-import { showLobby } from "./lobby";
+import { Input } from "./input/Input";
+import { Net } from "./net/Net";
+import { World } from "./scene/World";
+import { Sky } from "./scene/Sky";
+import { Clouds } from "./scene/Clouds";
+import { Dust } from "./scene/Dust";
+import { Tumbleweed } from "./scene/Tumbleweed";
+import { Sun } from "./scene/Sun";
+import { Cactus } from "./scene/Cactus";
+import { Crab, type Rect, type CrabState } from "./entities/Crab";
+import { Hud } from "./ui/Hud";
+import { showLobby } from "./net/lobby";
 
 TextureSource.defaultOptions.scaleMode = "nearest";
 
@@ -53,12 +53,10 @@ function overlap(a: Rect, b: Rect): boolean {
   app.renderer.on("resize", layout);
 
   // Build the pieces of the game.
-  const groundY = GROUND_Y;
-
   const input = new Input();
   const sky = new Sky();
   const clouds = new Clouds();
-  const world = new World(groundY);
+  const world = new World(GROUND_Y);
   const tumbleweed = new Tumbleweed();
   const dust = new Dust();
   const sun = new Sun(DESIGN_WIDTH * 0.82, DESIGN_HEIGHT * 0.2);

@@ -15,7 +15,7 @@ import {
   WHIP_REACH,
   WHIP_RECOVER,
   WHIP_WINDUP,
-} from "./config";
+} from "../config";
 
 const WALK_SPEED = 0.15; // how fast the legs shuffle through the cycle
 const WHIP_TOTAL = WHIP_WINDUP + WHIP_ACTIVE + WHIP_RECOVER;
@@ -156,15 +156,16 @@ export class Crab {
     this.flash = s.flash;
   }
 
-  // Called every frame. `direction`: 0 = standing, +1 = forward, -1 = backward.
+  // Called every frame. `delta` is the frame time scale (1 at 60fps).
   update(delta: number) {
-    // --- Simulation: only the crab's OWNER runs this. ---
+    // --- Simulation: only the crab's OWNER runs this. The remote crab's
+    // position/whip/flash come straight from applyState() over the network. ---
     if (this.isLocal) {
       if (this.moving != 0) {
-        this.x += this.moving * MOVE_SPEED * delta;
+        this.x += this.moving * MOVE_SPEED * delta; // walk
       }
-      this.x += this.knockbackVx * delta;
-      this.knockbackVx *= KNOCKBACK_DECAY;
+      this.x += this.knockbackVx * delta; // the shove
+      this.knockbackVx *= KNOCKBACK_DECAY; // bleed it off each frame
       this.x = Math.max(
         ARENA_MARGIN,
         Math.min(DESIGN_WIDTH - ARENA_MARGIN, this.x),
@@ -186,16 +187,6 @@ export class Crab {
 
       if (this.flash > 0) this.flash -= delta;
     }
-
-    if (this.moving != 0) {
-      this.x += this.moving * MOVE_SPEED * delta;
-    }
-    this.x += this.knockbackVx * delta; // the shove
-    this.knockbackVx *= KNOCKBACK_DECAY; // bleed it off each frame
-    this.x = Math.max(
-      ARENA_MARGIN,
-      Math.min(DESIGN_WIDTH - ARENA_MARGIN, this.x),
-    );
 
     // --- Render: BOTH crabs run this, using current x / facing / moving / whipFrame / flash. ---
     this.sprite.tint = this.flash > 0 ? 0xff5555 : 0xffffff;
