@@ -18,7 +18,8 @@
       "Bash(python3 -)",
       "Bash(git restore *)",
       "Bash(google-chrome-stable --headless=new --no-sandbox --hide-scrollbars --enable-unsafe-swiftshader --use-gl=angle --use-angle=swiftshader --virtual-time-budget=9000 --window-size=900x360 --enable-logging=stderr --v=0 --screenshot=/tmp/whip3.png \"http://localhost:5191/whip-test.html\")",
-      "Bash(pkill -f \"vite --port 5191\")"
+      "Bash(pkill -f \"vite --port 5191\")",
+      "Bash(git mv *)"
     ]
   },
   "enabledPlugins": {
