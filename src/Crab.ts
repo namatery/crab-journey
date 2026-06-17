@@ -215,29 +215,163 @@ export class Crab {
     }
 
     this.container.position.set(this.x, this.y);
-    this.drawWhip(this.whipExtension());
+    this.drawWhip();
   }
 
-  private whipExtension(): number {
+  // The whip's pose for the current frame: the tip's direction (`angle`, radians
+  // from "forward", positive = up), how far it reaches (`len`), how much the cord
+  // bows to one side (`curl`, the lashing arc), and `crack` — the snap intensity
+  // at the tip during the strike. The cord is held up-and-back at rest, cocks
+  // further back on the wind-up, then whips forward and down on the active frames
+  // (the crack), and finally settles back to rest as it recovers.
+  private whipPose(): {
+    angle: number;
+    len: number;
+    curl: number;
+    crack: number;
+  } {
     const f = this.whipFrame;
-    if (f < 0) return 0; // idle: no lash
-    if (f < WHIP_WINDUP) return f / WHIP_WINDUP; // 0→1: shooting out
-    if (f < WHIP_WINDUP + WHIP_ACTIVE) return 1; // hold: fully cracked
-    const r = (f - WHIP_WINDUP - WHIP_ACTIVE) / WHIP_RECOVER; // 0→1 across recover
-    return 1 - r; // 1→0: retracting
+    const R = WHIP_REACH;
+    const REST_A = (118 * Math.PI) / 180,
+      REST_L = R * 0.42;
+    const COCK_A = (152 * Math.PI) / 180,
+      COCK_L = R * 0.58;
+    const STRK_A = (-7 * Math.PI) / 180,
+      STRK_L = R;
+    const lerp = (a: number, b: number, t: number) => a + (b - a) * t;
+    const smooth = (t: number) => t * t * (3 - 2 * t);
+
+    if (f < 0) {
+      // Idle: coiled, resting up over the shoulder — the crab just holds it.
+      return { angle: REST_A, len: REST_L, curl: 0.32, crack: 0 };
+    }
+    if (f < WHIP_WINDUP) {
+      const t = smooth(f / WHIP_WINDUP);
+      return {
+        angle: lerp(REST_A, COCK_A, t),
+        len: lerp(REST_L, COCK_L, t),
+        curl: lerp(0.32, 0.5, t), // bow further back as it cocks
+        crack: 0,
+      };
+    }
+    if (f < WHIP_WINDUP + WHIP_ACTIVE) {
+      const t = (f - WHIP_WINDUP) / WHIP_ACTIVE;
+      const e = t * (2 - t); // ease-out: a fast snap that settles forward
+      return {
+        angle: lerp(COCK_A, STRK_A, e),
+        len: lerp(COCK_L, STRK_L, e),
+        curl: lerp(0.5, -0.22, e), // arc flips: over the top, then crack down
+        crack: Math.max(0, 1 - Math.abs(t - 0.75) / 0.25), // peaks late
+      };
+    }
+    const t = smooth((f - WHIP_WINDUP - WHIP_ACTIVE) / WHIP_RECOVER);
+    return {
+      angle: lerp(STRK_A, REST_A, t),
+      len: lerp(STRK_L, REST_L, t),
+      curl: lerp(-0.22, 0.32, t),
+      crack: 0,
+    };
   }
 
-  private drawWhip(extend: number) {
+  private drawWhip() {
     const g = this.whipGfx;
     g.clear(); // erase last frame
-    if (extend <= 0.02) return; // idle / fully retracted → draw nothing
 
     const dir = this.facing >= 0 ? 1 : -1; // which way the crab faces
-    const startX = dir * CRAB_SIZE * 0.34; // start just past the body edge
-    const tipX = startX + dir * WHIP_REACH * extend; // tip = reach × how-extended
+    const { angle, len, curl, crack } = this.whipPose();
 
-    g.moveTo(startX, 0) // pen at the crab's front
-      .lineTo(tipX, 0) // drag out to the tip
-      .stroke({ width: 3, color: this.color, cap: "round" });
+    // Work in "forward space" (x = distance in front of the crab, y = screen
+    // down) and mirror x by `dir` when emitting points, so the whole whip just
+    // follows the facing. The hand sits just past the body edge, up in the claw.
+    const hf = CRAB_SIZE * 0.3;
+    const hy = -CRAB_SIZE * 0.06;
+    const tx = hf + len * Math.cos(angle);
+    const ty = hy - len * Math.sin(angle);
+
+    // Quadratic bezier from hand to tip, bowed sideways by `curl` so the cord
+    // reads as a flexible lash rather than a stick.
+    const mx = (hf + tx) / 2;
+    const my = (hy + ty) / 2;
+    let dx = tx - hf,
+      dy = ty - hy;
+    const dm = Math.hypot(dx, dy) || 1;
+    dx /= dm;
+    dy /= dm;
+    const cx = mx + dy * curl * len; // push the control point along the normal
+    const cy = my - dx * curl * len;
+
+    const N = 16;
+    const cen: { x: number; y: number }[] = [];
+    for (let i = 0; i <= N; i++) {
+      const t = i / N;
+      const u = 1 - t;
+      const fx = u * u * hf + 2 * u * t * cx + t * t * tx;
+      const fy = u * u * hy + 2 * u * t * cy + t * t * ty;
+      cen.push({ x: dir * fx, y: fy });
+    }
+
+    // Turn the centerline into a tapered ribbon: thick at the grip, hair-thin at
+    // the popper. Offset each point along its local normal by half the width.
+    const HANDLE_W = 6;
+    const leftPts: number[] = [];
+    const rightPts: { x: number; y: number }[] = [];
+    for (let i = 0; i <= N; i++) {
+      const a = cen[Math.max(0, i - 1)];
+      const b = cen[Math.min(N, i + 1)];
+      let ux = b.x - a.x,
+        uy = b.y - a.y;
+      const m = Math.hypot(ux, uy) || 1;
+      ux /= m;
+      uy /= m;
+      const half = (HANDLE_W * (1 - i / N) + 0.8) / 2;
+      leftPts.push(cen[i].x - uy * half, cen[i].y + ux * half);
+      rightPts.push({ x: cen[i].x + uy * half, y: cen[i].y - ux * half });
+    }
+    const poly = leftPts.slice();
+    for (let i = rightPts.length - 1; i >= 0; i--) {
+      poly.push(rightPts[i].x, rightPts[i].y);
+    }
+    g.poly(poly).fill(COLORS.whipCord);
+
+    // A thin sheen down the cord for a little leather shine.
+    g.moveTo(cen[0].x, cen[0].y);
+    for (let i = 1; i <= N; i++) g.lineTo(cen[i].x, cen[i].y);
+    g.stroke({ width: 1.4, color: COLORS.whipHi, cap: "round", alpha: 0.85 });
+
+    // The grip: a short, fat handle the crab holds, butting back from the hand
+    // along the cord's base direction, with a band in the crab's own colour.
+    const hx = dir * hf;
+    let bx = cen[1].x - cen[0].x,
+      by = cen[1].y - cen[0].y;
+    const bm = Math.hypot(bx, by) || 1;
+    bx /= bm;
+    by /= bm;
+    const grip = CRAB_SIZE * 0.17;
+    g.moveTo(hx - bx * grip, hy - by * grip)
+      .lineTo(hx, hy)
+      .stroke({ width: 7, color: COLORS.whipHandle, cap: "round" });
+    g.moveTo(hx, hy)
+      .lineTo(hx + bx * 5, hy + by * 5)
+      .stroke({ width: 7, color: this.color, cap: "round" }); // identity band
+
+    // A bright little snap-spark at the popper on the active crack frames.
+    if (crack > 0.35) {
+      const tip = cen[N];
+      let tdx = cen[N].x - cen[N - 1].x,
+        tdy = cen[N].y - cen[N - 1].y;
+      const tm = Math.hypot(tdx, tdy) || 1;
+      tdx /= tm;
+      tdy /= tm;
+      for (const a of [-0.6, 0, 0.6]) {
+        const ca = Math.cos(a),
+          sa = Math.sin(a);
+        const rx = tdx * ca - tdy * sa;
+        const ry = tdx * sa + tdy * ca;
+        const reach = 5 + crack * 6;
+        g.moveTo(tip.x, tip.y)
+          .lineTo(tip.x + rx * reach, tip.y + ry * reach)
+          .stroke({ width: 1.6, color: COLORS.whipCrack, alpha: crack });
+      }
+    }
   }
 }

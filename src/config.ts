@@ -21,6 +21,10 @@ export const COLORS = {
   crab: "#d97757", // legacy terracotta (fallback / whip default)
   crabHost: "#ff5a3c", // host crab — vivid coral red
   crabGuest: "#ff5a3c", // guest crab — lively teal
+  whipCord: "#6f4423", // braided leather whip cord
+  whipHandle: "#3f2817", // dark wooden grip the crab holds
+  whipHi: "#a9712f", // lit sheen running down the cord
+  whipCrack: "#fff4d6", // little snap-spark at the tip on the strike
 };
 
 // Scenery is laid out in the fixed design space and then scaled to the window.

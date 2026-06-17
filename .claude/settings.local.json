@@ -11,7 +11,17 @@
       "Bash(echo \"=== tsc exit $? ===\")",
       "Bash(npm install *)",
       "Bash(echo \"exit: $?\")",
-      "Bash(echo \"exit $?\")"
+      "Bash(echo \"exit $?\")",
+      "Bash(cd *)",
+      "Bash(cp public/assets/crab.png /tmp/crab.orig.png)",
+      "Bash(cp public/assets/cactus.png /tmp/cactus.orig.png)",
+      "Bash(python3 -)",
+      "Bash(git restore *)",
+      "Bash(google-chrome-stable --headless=new --no-sandbox --hide-scrollbars --enable-unsafe-swiftshader --use-gl=angle --use-angle=swiftshader --virtual-time-budget=9000 --window-size=900x360 --enable-logging=stderr --v=0 --screenshot=/tmp/whip3.png \"http://localhost:5191/whip-test.html\")",
+      "Bash(pkill -f \"vite --port 5191\")"
     ]
+  },
+  "enabledPlugins": {
+    "frontend-design@claude-plugins-official": true
   }
 }
