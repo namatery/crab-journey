@@ -18,6 +18,7 @@ import { Sun } from "./scene/Sun";
 import { Cactus } from "./scene/Cactus";
 import { Crab, type Rect, type CrabState } from "./entities/Crab";
 import { Hud } from "./ui/Hud";
+import { showEndScreen } from "./ui/endScreen";
 import { showLobby } from "./net/lobby";
 
 TextureSource.defaultOptions.scaleMode = "nearest";
@@ -101,6 +102,7 @@ function overlap(a: Rect, b: Rect): boolean {
   // clouds drift, dust blows, the crabs idle on the sand behind the menu.
   // Once connected it holds the networking + who-controls-which-crab.
   let game: { net: Net; mine: Crab; theirs: Crab } | null = null;
+  let over = false; // flips true the moment a crab's HP hits zero
 
   app.ticker.add((time) => {
     const delta = time.deltaTime;
@@ -118,23 +120,38 @@ function overlap(a: Rect, b: Rect): boolean {
     }
     const { net, mine, theirs } = game;
 
-    // Drive MY crab from the keyboard.
-    const direction =
-      (input.isDown("d") ? 1 : 0) + (input.isDown("a") ? -1 : 0);
-    mine.setMove(direction);
-    if (input.justPressed(" ")) mine.attack();
+    if (!over) {
+      // Drive MY crab from the keyboard.
+      const direction =
+        (input.isDown("d") ? 1 : 0) + (input.isDown("a") ? -1 : 0);
+      mine.setMove(direction);
+      if (input.justPressed(" ")) mine.attack();
+    }
 
     // mine simulates; theirs just renders the last synced state.
     mine.update(delta);
     theirs.update(delta);
 
-    // Broadcast my crab's state to the opponent every frame.
-    net.send({ t: "state", s: mine.netState() });
+    if (!over) {
+      // Broadcast my crab's state to the opponent every frame.
+      net.send({ t: "state", s: mine.netState() });
 
-    // If my whip connects, tell them to take damage (they own their HP).
-    if (mine.whipActive() && overlap(mine.whipBox(), theirs.body())) {
-      mine.markHit();
-      net.send({ t: "hit" });
+      // If my whip connects, tell them to take damage (they own their HP).
+      if (mine.whipActive() && overlap(mine.whipBox(), theirs.body())) {
+        mine.markHit();
+        net.send({ t: "hit" });
+      }
+
+      // A flattened crab ends the duel. Both clients track both HP bars, so each
+      // side reaches the same verdict: my crab down → I lose, theirs down → I win.
+      if (mine.hp <= 0 || theirs.hp <= 0) {
+        over = true;
+        mine.setMove(0); // freeze so the winner doesn't keep walking
+        net.send({ t: "state", s: mine.netState() }); // flush final HP to them
+        const result =
+          mine.hp <= 0 ? (theirs.hp <= 0 ? "draw" : "lose") : "win";
+        showEndScreen(result);
+      }
     }
 
     hud.update(leftCrab.hp, rightCrab.hp);

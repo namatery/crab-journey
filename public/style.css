@@ -20,7 +20,8 @@ body {
    (see main.ts): same sky, square sun, dunes, clouds, cacti and the two
    recoloured crabs idling on the sand. The lobby is just a transparent overlay
    holding the menu, so the menu literally sits inside the game. */
-#lobby {
+#lobby,
+#gameover {
     position: fixed;
     inset: 0;
     z-index: 10;
@@ -33,7 +34,8 @@ body {
 }
 
 /* The "game window": a chunky pixel panel with a hard offset shadow. */
-#lobby .panel {
+#lobby .panel,
+#gameover .panel {
     position: relative;
     z-index: 1;
     display: flex;
@@ -46,7 +48,8 @@ body {
     box-shadow: 12px 12px 0 rgba(43, 35, 51, 0.35);
 }
 
-#lobby h1 {
+#lobby h1,
+#gameover h1 {
     margin: 0;
     font-size: 30px;
     line-height: 1.3;
@@ -54,7 +57,8 @@ body {
     text-shadow: 4px 4px 0 #a8492e;
 }
 
-#lobby .tagline {
+#lobby .tagline,
+#gameover .tagline {
     margin: -8px 0 4px;
     font-size: 9px;
     line-height: 1.6;
@@ -70,7 +74,8 @@ body {
 }
 
 #lobby button,
-#lobby input {
+#lobby input,
+#gameover button {
     font-family: inherit;
     font-size: 14px;
     padding: 16px 20px;
@@ -80,7 +85,8 @@ body {
 }
 
 /* Pixel buttons depress into their hard shadow when pressed. */
-#lobby button {
+#lobby button,
+#gameover button {
     cursor: pointer;
     background: #d97757;
     color: #fff6e6;
@@ -89,11 +95,13 @@ body {
     transition: transform 0.04s, box-shadow 0.04s, background 0.1s;
 }
 
-#lobby button:hover {
+#lobby button:hover,
+#gameover button:hover {
     background: #e08a6b;
 }
 
-#lobby button:active {
+#lobby button:active,
+#gameover button:active {
     transform: translate(6px, 6px);
     box-shadow: 0 0 0 #2b2333;
 }
