@@ -7,29 +7,9 @@ import { COLORS } from "./config";
 export class Sun {
   container = new Container();
 
-  constructor(x: number, y: number, size = 140) {
+  constructor(x: number, y: number, size = 90) {
     const g = new Graphics();
     const h = size / 2;
-
-    // Eight square rays radiating from the body (drawn first, behind it).
-    const ray = size * 0.17;
-    const reach = h + size * 0.16;
-    const dirs = [
-      [0, -1],
-      [1, 0],
-      [0, 1],
-      [-1, 0],
-      [1, -1],
-      [1, 1],
-      [-1, 1],
-      [-1, -1],
-    ];
-    for (const [dx, dy] of dirs) {
-      const f = dx !== 0 && dy !== 0 ? 0.72 : 1; // pull diagonals in a touch
-      g.rect(dx * reach * f - ray / 2, dy * reach * f - ray / 2, ray, ray).fill(
-        COLORS.sunDeep,
-      );
-    }
 
     // Square body.
     g.rect(-h, -h, size, size).fill(COLORS.sun);
