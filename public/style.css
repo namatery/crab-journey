@@ -2,7 +2,8 @@ body {
     margin: 0;
     padding: 0;
     color: rgba(255, 255, 255, 0.87);
-    background-color: #000000;
+    background-color: #8ecae6;
+    /* COLORS.sky — fills the frame before the PixiJS scene paints */
 }
 
 #app {
@@ -14,110 +15,21 @@ body {
     align-items: center;
 }
 
-/* ── Pixel-art desert lobby ───────────────────────────────────────────────
-   Palette mirrors src/config.ts so the lobby and the game share one mood:
-   sky #8ecae6 · sand #e3c184 · sandShadow #caa25c · crab/terracotta #d97757 */
-
-/* The whole scene mirrors the game's design space (1280x720, ground at y=600),
-   so the lobby reads as the duel's opening shot: same flat sky, same horizon,
-   same sun / cacti / crabs, rendered from the very same sprite assets. */
+/* ── Lobby overlay ─────────────────────────────────────────────────────────
+   The desert behind the panel is the *real* PixiJS game world, rendered live
+   (see main.ts): same sky, square sun, dunes, clouds, cacti and the two
+   recoloured crabs idling on the sand. The lobby is just a transparent overlay
+   holding the menu, so the menu literally sits inside the game. */
 #lobby {
     position: fixed;
     inset: 0;
     z-index: 10;
-    /* horizon sits 600/720 of the way down, matching GROUND_Y in config.ts */
-    --sand: 16.67%;
     display: flex;
     justify-content: center;
     align-items: center;
-    overflow: hidden;
-    background: #8ecae6;
-    /* COLORS.sky — the same flat daytime sky the game boots with */
+    background: transparent;
     font-family: "Press Start 2P", monospace;
     -webkit-font-smoothing: none;
-}
-
-/* Sprites keep their crisp pixels when scaled, like the game's "nearest" mode. */
-#lobby .sun,
-#lobby .cactus,
-#lobby .crab {
-    position: absolute;
-    image-rendering: pixelated;
-    pointer-events: none;
-    user-select: none;
-}
-
-/* The pixel-art sun, hung where the game places it (DESIGN 0.82, 0.2). */
-#lobby .sun {
-    top: 6%;
-    right: 9%;
-    width: clamp(110px, 15vw, 210px);
-    height: auto;
-}
-
-/* Saguaros standing on the horizon, one tall + one short, framing the arena. */
-#lobby .cactus {
-    bottom: calc(var(--sand) - 1%);
-    height: clamp(150px, 26vh, 300px);
-    width: auto;
-}
-
-#lobby .cactus-left {
-    left: 4%;
-}
-
-#lobby .cactus-right {
-    right: 4%;
-    height: clamp(120px, 21vh, 240px);
-    /* a touch shorter, like the 150px cactus in main.ts */
-    transform: scaleX(-1);
-}
-
-/* The two duelists waiting on the sand, facing each other across the menu. */
-#lobby .crab {
-    bottom: calc(var(--sand) - 2%);
-    width: clamp(72px, 9vw, 120px);
-    height: auto;
-}
-
-#lobby .crab-left {
-    left: 16%;
-    animation: crab-bob 1.6s steps(2, end) infinite;
-}
-
-#lobby .crab-right {
-    right: 16%;
-    transform: scaleX(-1);
-    /* faces the host crab, mirroring rightCrab's facing = -1 */
-    animation: crab-bob-flip 1.6s steps(2, end) infinite 0.8s;
-}
-
-/* A two-step hop keeps the idle lively without breaking the pixel feel. */
-@keyframes crab-bob {
-    0%, 50% { transform: translateY(0); }
-    51%, 100% { transform: translateY(-8px); }
-}
-
-@keyframes crab-bob-flip {
-    0%, 50% { transform: scaleX(-1) translateY(0); }
-    51%, 100% { transform: scaleX(-1) translateY(-8px); }
-}
-
-@media (prefers-reduced-motion: reduce) {
-    #lobby .crab { animation: none; }
-}
-
-/* The sun-baked ground, with the same hard shadow line at the horizon. */
-#lobby .sand {
-    position: absolute;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    height: var(--sand);
-    background: #e3c184;
-    /* COLORS.sand */
-    border-top: 6px solid #caa25c;
-    /* COLORS.sandShadow */
 }
 
 /* The "game window": a chunky pixel panel with a hard offset shadow. */

@@ -1,4 +1,4 @@
-import { Application, Container, Graphics, TextureSource } from "pixi.js";
+import { Application, Container, TextureSource } from "pixi.js";
 import {
   COLORS,
   CRAB_SIZE,
@@ -8,6 +8,7 @@ import {
   WHIP_DAMAGE,
 } from "./config";
 import { Input } from "./Input";
+import { Net } from "./Net";
 import { World } from "./World";
 import { Sky } from "./Sky";
 import { Clouds } from "./Clouds";
@@ -28,17 +29,14 @@ function overlap(a: Rect, b: Rect): boolean {
 }
 
 (async () => {
-  const { net, role } = await showLobby();
-
-  // Boot PixiJS and attach the canvas to the page.
+  // Boot PixiJS and attach the canvas to the page. The whole scene is built up
+  // front and rendered live behind the lobby, so the menu sits right inside the
+  // real game world — same sky, sun, dunes, cacti and crabs.
   const app = new Application();
   await app.init({ background: COLORS.sky, resizeTo: window });
   document.getElementById("pixi-container")!.appendChild(app.canvas);
 
   const root = new Container();
-
-  const debug = new Graphics();
-  root.addChild(debug);
 
   function layout() {
     const s = Math.min(
@@ -98,20 +96,13 @@ function overlap(a: Rect, b: Rect): boolean {
   root.addChild(rightCrab.container);
   root.addChild(hud.container);
 
-  const mine = role === "host" ? leftCrab : rightCrab;
-  const theirs = role === "host" ? rightCrab : leftCrab;
-  theirs.isLocal = false;
+  app.stage.addChild(root);
 
-  net.onData = (msg) => {
-    const m = msg as { t: string; s?: CrabState };
-    if (m.t === "state" && m.s) {
-      theirs.applyState(m.s); // copy their crab's position/whip/hp
-    } else if (m.t === "hit") {
-      mine.hit(WHIP_DAMAGE, theirs.facing); // they hit me → I lose my own HP
-    }
-  };
+  // Until both players connect, `game` is null and the scene just breathes —
+  // clouds drift, dust blows, the crabs idle on the sand behind the menu.
+  // Once connected it holds the networking + who-controls-which-crab.
+  let game: { net: Net; mine: Crab; theirs: Crab } | null = null;
 
-  // The game loop: read input, move the world.
   app.ticker.add((time) => {
     const delta = time.deltaTime;
 
@@ -119,6 +110,15 @@ function overlap(a: Rect, b: Rect): boolean {
     clouds.update(delta);
     dust.update(delta);
     tumbleweed.update(delta);
+
+    if (!game) {
+      // Lobby idle: both crabs just stand and render.
+      leftCrab.update(delta);
+      rightCrab.update(delta);
+      hud.update(leftCrab.hp, rightCrab.hp);
+      return;
+    }
+    const { net, mine, theirs } = game;
 
     // Drive MY crab from the keyboard.
     const direction =
@@ -142,5 +142,22 @@ function overlap(a: Rect, b: Rect): boolean {
     hud.update(leftCrab.hp, rightCrab.hp);
   });
 
-  app.stage.addChild(root);
+  // Show the lobby over the living scene and wait for an opponent. Once we're
+  // connected, hand the crabs to the players and flip the loop into gameplay.
+  const lobby = await showLobby();
+  const net = lobby.net;
+  const mine = lobby.role === "host" ? leftCrab : rightCrab;
+  const theirs = lobby.role === "host" ? rightCrab : leftCrab;
+  theirs.isLocal = false;
+
+  net.onData = (msg) => {
+    const m = msg as { t: string; s?: CrabState };
+    if (m.t === "state" && m.s) {
+      theirs.applyState(m.s); // copy their crab's position/whip/hp
+    } else if (m.t === "hit") {
+      mine.hit(WHIP_DAMAGE, theirs.facing); // they hit me → I lose my own HP
+    }
+  };
+
+  game = { net, mine, theirs };
 })();
