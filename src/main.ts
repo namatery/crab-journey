@@ -65,6 +65,7 @@ function overlap(a: Rect, b: Rect): boolean {
   const cactusLeft = await Cactus.create(160, GROUND_Y, 190);
   const cactusRight = await Cactus.create(1120, GROUND_Y, 150);
   const hud = new Hud();
+  hud.container.visible = false; // shown only once the duel begins
   // Center anchor + 50px size → feet are 25px below the position, so place the
   // crab a half-height above groundY to rest its feet on the ground line.
   const leftCrab = await Crab.create(
@@ -112,10 +113,9 @@ function overlap(a: Rect, b: Rect): boolean {
     tumbleweed.update(delta);
 
     if (!game) {
-      // Lobby idle: both crabs just stand and render.
+      // Lobby idle: both crabs just stand and render (no HUD until the duel).
       leftCrab.update(delta);
       rightCrab.update(delta);
-      hud.update(leftCrab.hp, rightCrab.hp);
       return;
     }
     const { net, mine, theirs } = game;
@@ -159,5 +159,6 @@ function overlap(a: Rect, b: Rect): boolean {
     }
   };
 
+  hud.container.visible = true;
   game = { net, mine, theirs };
 })();
